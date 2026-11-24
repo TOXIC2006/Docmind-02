@@ -240,6 +240,23 @@ function renderTrace(trace, cache, usage) {
   $('#trace-warnings').replaceChildren(...(trace.warnings || []).map(warning => element('p', '', warning)));
 }
 
+// Neon DB / Better Auth Social Logins (Google & GitHub)
+async function handleSocialLogin(provider) {
+  authMessage(`Connecting to ${provider === 'google' ? 'Google' : 'GitHub'} via Neon Auth…`, true);
+  // Default to window.NEON_AUTH_URL or standard Better Auth / Neon Auth endpoint
+  const neonAuthBase = window.NEON_AUTH_URL || '/api/auth';
+  const callbackUrl = encodeURIComponent(window.location.origin);
+  const targetUrl = `${neonAuthBase}/sign-in/social?provider=${provider}&callbackURL=${callbackUrl}`;
+  try {
+    window.location.href = targetUrl;
+  } catch (error) {
+    authMessage(`Could not initiate ${provider} login: ${error.message}`);
+  }
+}
+
+$('#google-login-btn')?.addEventListener('click', () => handleSocialLogin('google'));
+$('#github-login-btn')?.addEventListener('click', () => handleSocialLogin('github'));
+
 $('#auth-form').addEventListener('submit', async event => {
   event.preventDefault();
   const registering = state.registering;
@@ -347,11 +364,17 @@ window.addEventListener('hashchange', route);
 
 async function start() {
   route();
-  const token = new URLSearchParams(location.search).get('token');
-  if (location.pathname === '/verify' && token) {
+  const params = new URLSearchParams(location.search);
+  const token = params.get('token') || params.get('access_token');
+  if (token) {
+    state.token = token;
+    sessionStorage.setItem('docmind-token', token);
+    history.replaceState(null, '', location.pathname);
+  }
+  if (location.pathname === '/verify' && params.get('token')) {
     history.replaceState(null, '', '/');
     try {
-      const result = await api(`/docmind/auth/verify/email?token_id=${encodeURIComponent(token)}`, { authenticated: false });
+      const result = await api(`/docmind/auth/verify/email?token_id=${encodeURIComponent(params.get('token'))}`, { authenticated: false });
       authMessage(result.message, true);
     } catch (error) { if (error.name !== 'AbortError') authMessage(error.message); }
   }
