@@ -39,6 +39,7 @@ public class SecurityConfig {
     private static final String[] PUBLIC_PATHS = {
             "/docmind/auth/register",
             "/docmind/auth/login",
+            "/docmind/auth/oauth-login",
             "/docmind/auth/verify/email",
             "/docmind/auth/resend",
             "/v3/api-docs/**",

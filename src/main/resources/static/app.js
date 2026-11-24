@@ -240,17 +240,26 @@ function renderTrace(trace, cache, usage) {
   $('#trace-warnings').replaceChildren(...(trace.warnings || []).map(warning => element('p', '', warning)));
 }
 
+const NEON_AUTH_URL = 'https://ep-flat-heart-binuia44.neonauth.c-5.ap-southeast-1.aws.neon.tech/neondb/auth';
+
 // Neon DB / Better Auth Social Logins (Google & GitHub)
 async function handleSocialLogin(provider) {
   authMessage(`Connecting to ${provider === 'google' ? 'Google' : 'GitHub'} via Neon Auth…`, true);
-  // Default to window.NEON_AUTH_URL or standard Better Auth / Neon Auth endpoint
-  const neonAuthBase = window.NEON_AUTH_URL || '/api/auth';
-  const callbackUrl = encodeURIComponent(window.location.origin);
-  const targetUrl = `${neonAuthBase}/sign-in/social?provider=${provider}&callbackURL=${callbackUrl}`;
   try {
-    window.location.href = targetUrl;
+    const callbackURL = window.location.origin;
+    const response = await fetch(`${NEON_AUTH_URL}/sign-in/social`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider, callbackURL })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      throw new Error(data.message || 'Could not initiate social login with Neon Auth');
+    }
   } catch (error) {
-    authMessage(`Could not initiate ${provider} login: ${error.message}`);
+    authMessage(`Social login error: ${error.message}`);
   }
 }
 
@@ -268,8 +277,15 @@ $('#auth-form').addEventListener('submit', async event => {
     if (registering) body.username = $('#username').value.trim();
     const data = await api(`/docmind/auth/${registering ? 'register' : 'login'}`, { method: 'POST', authenticated: false, body });
     if (registering) {
-      authMessage('Check your inbox to verify your email, then sign in.', true);
-      $('#password').value = '';
+      if (data.token) {
+        state.token = data.token;
+        sessionStorage.setItem('docmind-token', data.token);
+        await enterWorkspace();
+      } else {
+        authMessage('Account created! Sign in to enter workspace.', true);
+        $('#password').value = '';
+        $('#auth-switch').click();
+      }
     } else {
       if (!data.token) throw new Error('No sign-in token was returned. Please retry.');
       state.token = data.token;
@@ -371,6 +387,29 @@ async function start() {
     sessionStorage.setItem('docmind-token', token);
     history.replaceState(null, '', location.pathname);
   }
+
+  // Check if user authenticated via Neon DB Better Auth
+  if (!state.token) {
+    try {
+      const sessionRes = await fetch(`${NEON_AUTH_URL}/get-session`, { credentials: 'include' });
+      const sessionData = await sessionRes.json().catch(() => null);
+      if (sessionData && sessionData.user && sessionData.user.email) {
+        authMessage('Finalizing Neon Auth sign in…', true);
+        const authData = await api('/docmind/auth/oauth-login', {
+          method: 'POST',
+          authenticated: false,
+          body: { email: sessionData.user.email, name: sessionData.user.name || sessionData.user.email }
+        });
+        if (authData.token) {
+          state.token = authData.token;
+          sessionStorage.setItem('docmind-token', authData.token);
+        }
+      }
+    } catch (_) {
+      // No active Better Auth session, proceed with local session
+    }
+  }
+
   if (location.pathname === '/verify' && params.get('token')) {
     history.replaceState(null, '', '/');
     try {

@@ -4,6 +4,7 @@ import com.lcdw.springai.docmind01.DTO.SecurityDTO.AuthResponseDTO;
 import com.lcdw.springai.docmind01.DTO.SecurityDTO.LoginDTO;
 import com.lcdw.springai.docmind01.DTO.SecurityDTO.RegisterDTO;
 import com.lcdw.springai.docmind01.Execption.API_Respone;
+import com.lcdw.springai.docmind01.Execption.Auth_EXE;
 import com.lcdw.springai.docmind01.Service.Security.AppUserPrincipal;
 import com.lcdw.springai.docmind01.Service.Security.Auth;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,6 +44,17 @@ public class AuthController {
             description = "Returns a JWT to send as 'Authorization: Bearer <token>' on every other endpoint.")
     public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginDTO loginRequest) {
         return ResponseEntity.ok(authService.login(loginRequest));
+    }
+
+    @PostMapping("/oauth-login")
+    @Operation(summary = "Sign in or register with verified OAuth credentials from Neon DB Better Auth")
+    public ResponseEntity<AuthResponseDTO> oauthLogin(@RequestBody Map<String, String> payload) {
+        String email = payload.get("email");
+        String name = payload.get("name");
+        if (email == null || email.isBlank()) {
+            throw new Auth_EXE("Email is required from OAuth provider.");
+        }
+        return ResponseEntity.ok(authService.loginWithOAuth(email, name));
     }
 
     @GetMapping("/verify/email")

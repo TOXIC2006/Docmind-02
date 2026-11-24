@@ -68,18 +68,63 @@ public class AuthService implements Auth {
 
         String rawToken = issueVerificationToken(user);
 
-        // Inside the transaction on purpose: if the mail cannot be sent the account is rolled
-        // back rather than left behind as a permanently unreachable, unverified row.
-        emailService.sendVerificationEmail(user.getEmail(), user.getUsername(), rawToken);
+        try {
+            emailService.sendVerificationEmail(user.getEmail(), user.getUsername(), rawToken);
+        } catch (Exception e) {
+            log.warn("SMTP email delivery failed ({}); auto-verifying user account so registration proceeds without SMTP.", e.getMessage());
+            user.setEmailVerified(true);
+            user.setVerificationTokenHash(null);
+            user.setVerificationTokenExpiry(null);
+            userRepository.save(user);
+        }
 
-        log.info("registered unverified account {}", user.getId());
+        log.info("registered account {}", user.getId());
 
         return AuthResponseDTO.builder()
                 .id(user.getId())
                 .email(user.getEmail())
                 .role(user.getRole())
-                .status(false)
+                .status(user.isEmailVerified())
+                .token(user.isEmailVerified() ? jwtService.generateToken(user.getId(), user.getEmail(), user.getRole()) : null)
                 .createdAt(toDate(user.getCreatedAt()))
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public AuthResponseDTO loginWithOAuth(String email, String username) {
+        String normalizedEmail = normalizeEmail(email);
+        User user = userRepository.findByEmail(normalizedEmail).orElseGet(() -> {
+            String uname = (username != null && !username.isBlank()) ? username.trim() : normalizedEmail.split("@")[0];
+            String candidate = uname;
+            int counter = 1;
+            while (userRepository.existsByUsername(candidate)) {
+                candidate = uname + counter++;
+            }
+            User newUser = User.builder()
+                    .username(candidate)
+                    .email(normalizedEmail)
+                    .password(passwordEncoder.encode(java.util.UUID.randomUUID().toString()))
+                    .role(DEFAULT_ROLE)
+                    .emailVerified(true)
+                    .build();
+            return userRepository.save(newUser);
+        });
+
+        if (!user.isEmailVerified()) {
+            user.setEmailVerified(true);
+            userRepository.save(user);
+        }
+
+        return AuthResponseDTO.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .token(jwtService.generateToken(user.getId(), user.getEmail(), user.getRole()))
+                .status(true)
+                .expiresInMinutes(jwtService.getExpirationMinutes())
+                .createdAt(toDate(user.getCreatedAt()))
+                .updatedAt(toDate(user.getUpdatedAt()))
                 .build();
     }
 

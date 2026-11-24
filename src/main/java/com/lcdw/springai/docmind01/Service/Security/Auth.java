@@ -8,6 +8,8 @@ public interface Auth {
 
     AuthResponseDTO login(LoginDTO loginDTO);
 
+    AuthResponseDTO loginWithOAuth(String email, String username);
+
     AuthResponseDTO register(RegisterDTO registerDTO);
 
     /** Returns the email address that was just verified. */
