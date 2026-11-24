@@ -1,24 +1,27 @@
-# 🧠 DocMind — AI-Powered Document Intelligence Platform
+# 🧠 DocMind-02 — AI-Powered Document Intelligence Platform
 
 <p align="center">
-  <strong>Chat with your documents. Retrieve knowledge. Get intelligent answers.</strong>
+  <strong>Chat with your documents. Hybrid Vector & Keyword Retrieval. Production-Ready RAG.</strong>
 </p>
 
 <p align="center">
-  A Spring Boot and Spring AI-powered Retrieval-Augmented Generation (RAG) application designed to make document interaction smarter through Large Language Models and vector search.
+  A Spring Boot 3.4 and Spring AI-powered Retrieval-Augmented Generation (RAG) platform featuring Pinecone vector search, BM25 keyword matching, Reciprocal Rank Fusion (RRF), Groq LLM integration, Docker containerization, and automated GitHub Actions CI/CD deployment to Render.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=openjdk" />
   <img src="https://img.shields.io/badge/Spring_Boot-3.4.11-brightgreen?style=for-the-badge&logo=springboot" />
   <img src="https://img.shields.io/badge/Spring_AI-1.0.0-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/PostgreSQL-PGVector-336791?style=for-the-badge&logo=postgresql" />
+  <img src="https://img.shields.io/badge/Pinecone-Vector_Database-000000?style=for-the-badge" />
+  <img src="https://img.shields.io/badge/Docker-Containerized-2496ED?style=for-the-badge&logo=docker" />
+  <img src="https://img.shields.io/badge/Render-Deployed-46E3B7?style=for-the-badge&logo=render" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/TOXIC2006/Docmind-01">Repository</a> •
+  <a href="https://github.com/TOXIC2006/Docmind-02">Repository</a> •
   <a href="#-architecture">Architecture</a> •
   <a href="#-tech-stack">Tech Stack</a> •
+  <a href="#-ci-cd--deployment-render">CI/CD & Deployment</a> •
   <a href="#-getting-started">Getting Started</a>
 </p>
 
@@ -141,13 +144,13 @@ Make sure you have installed:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/TOXIC2006/Docmind-01.git
+git clone https://github.com/TOXIC2006/Docmind-02.git
 ```
 
 ### 2. Navigate to the Project
 
 ```bash
-cd Docmind-01
+cd Docmind-02
 ```
 
 ### 3. Configure Environment Variables
@@ -219,6 +222,20 @@ Potential improvements for the project:
 - Docker-based Deployment
 - Observability and Performance Monitoring
 
+## 🚢 CI/CD & Deployment (Render)
+
+This repository includes automated CI/CD via **GitHub Actions** and is containerized with **Docker** for seamless deployment to **[Render](https://render.com)**.
+
+### Architecture on Render:
+1. **Dockerized Runtime**: Multi-stage build (`eclipse-temurin:17-jre-jammy`) with memory optimizations (`-XX:MaxRAMPercentage=75.0`) tailored for Render's container environment.
+2. **Dynamic Port Binding**: Configured via `${PORT:8081}` in `application.yml` to automatically listen on Render's exposed port.
+3. **Automated Pipeline (`.github/workflows/deploy.yml`)**:
+   - Triggers on push to `main` branch.
+   - Compiles and packages the application with Maven.
+   - Triggers the Render Deploy Hook securely via GitHub Secrets (`RENDER_DEPLOY_HOOK_URL`).
+
+---
+
 ## 👨‍💻 Developer
 
 **Siddharth Rawat**
@@ -226,7 +243,7 @@ Potential improvements for the project:
 Java Full-Stack Developer | Spring Boot | AI Engineering | RAG
 
 - GitHub: [@TOXIC2006](https://github.com/TOXIC2006)
-- Project: [DocMind](https://github.com/TOXIC2006/Docmind-01)
+- Project: [DocMind-02](https://github.com/TOXIC2006/Docmind-02)
 
 ---
 
